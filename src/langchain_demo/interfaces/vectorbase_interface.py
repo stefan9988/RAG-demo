@@ -7,4 +7,9 @@ class VectorbaseInterface(ABC):
     @abstractmethod
     def search_documents(self, query, num_results=5, threshold=0):
         pass
-    
+    @abstractmethod
+    def save(self):
+        pass
+    @abstractmethod
+    def load(self):
+        pass

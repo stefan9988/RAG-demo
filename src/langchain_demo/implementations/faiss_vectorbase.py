@@ -2,78 +2,182 @@ from langchain_demo.interfaces.vectorbase_interface import VectorbaseInterface
 from langchain_demo.interfaces.embeddings_interface import EmbeddingsInterface
 import faiss
 import logging
+import os
+import pickle
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s %(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class FaissVectorbase(VectorbaseInterface):
-    def __init__(self, embeddings_model:EmbeddingsInterface = None):
-        self.embeddings_model = embeddings_model
-        self.embeddings_model_name = embeddings_model.model_name 
-        self.index = faiss.IndexFlatIP(self.embeddings_model.emb_dim)
-        self.stored_documents = []
-        
-    def add_documents(self, documents: list[str]):
-        """
-        Adds documents to the vector store.
+    DEFAULT_INDEX_FILENAME = "faiss_index.index"
+    DEFAULT_METADATA_FILENAME = "metadata.pkl"
 
-        Args:
-            documents (list[str]): A list of text documents to add.
-        """
+    def __init__(self,
+                 embeddings_model: EmbeddingsInterface, 
+                 save_dir: str = "src/langchain_demo/faiss_vb", # Directory to save/load from
+                 index_filename: str = DEFAULT_INDEX_FILENAME,
+                 metadata_filename: str = DEFAULT_METADATA_FILENAME):
+
+        if not embeddings_model:
+            raise ValueError("EmbeddingsInterface instance is required.")
+
+        self.embeddings_model = embeddings_model
+        self.index = None 
+        self.stored_documents = []
+
+        # Construct full paths
+        self.save_dir = save_dir
+        self.index_path = os.path.join(save_dir, index_filename)
+        self.metadata_path = os.path.join(save_dir, metadata_filename)
+
+        # Ensure the save directory exists for future saves
+        os.makedirs(self.save_dir, exist_ok=True)
+
+        # Initialize a new FAISS index; load will overwrite this if files exist
+        self._initialize_index()
+
+    def _initialize_index(self):
+        """Initializes a new FAISS index."""
+        if self.embeddings_model:
+            self.index = faiss.IndexFlatIP(self.embeddings_model.emb_dim)
+            logger.info(f"Initialized new FAISS index with dimension {self.embeddings_model.emb_dim}.")
+        else:
+            self.index = None
+            logger.warning("Embeddings model not available, FAISS index not initialized.")
+
+
+    def add_documents(self, documents: list[str]):
+        if not self.embeddings_model:
+            logger.error("Embeddings model not initialized. Cannot add documents.")
+            raise ValueError("Embeddings model is not set.")
+        if not self.index:
+            logger.warning("Index not initialized. Attempting to initialize now.")
+            self._initialize_index()
+            if not self.index: 
+                 raise RuntimeError("Failed to initialize FAISS index.")
+
+
         if not documents:
             logger.info("No documents provided to add.")
             return
 
-        # 1. Get the embeddings for the documents
         embeddings = self.embeddings_model.get_embeddings(documents)
-
-        # 2. Add embeddings to the FAISS index
         self.index.add(embeddings)
-
-        # 3. Store the original documents
         self.stored_documents.extend(documents)
-
         logger.info(f"Added {len(documents)} documents. Index now contains {self.index.ntotal} vectors.")
-    
-    def search_documents(self, query, num_results=5, threshold=0):
-        """
-        Searches for documents similar to the query.
 
-        Args:
-            query (str): The search query text.
-            num_results (int): The maximum number of similar documents to return.
-
-        Returns:
-            list[str]: A list of the most similar documents found.
-        """
-        if self.index.ntotal == 0:
+    def search_documents(self, query: str, num_results: int = 5, threshold: float = 0.0):
+        if not self.embeddings_model:
+            logger.error("Embeddings model not initialized. Cannot search documents.")
+            raise ValueError("Embeddings model is not set.")
+        if not self.index or self.index.ntotal == 0:
             logger.info("Index is empty. Cannot perform search.")
             return []
 
-        # 1. Get the embedding for the query
         query_embedding = self.embeddings_model.get_embeddings([query])
-
-        # Ensure k is not greater than the number of vectors in the index
         k = min(num_results, self.index.ntotal)
-        logger.info(f"Searching for {k} most relevant documents...")
+        if k == 0: # handles edge case where index has items but k becomes 0
+            logger.info("Effective k is 0, no search performed.")
+            return []
 
-        # 2. Search the FAISS index
+        logger.info(f"Searching for {k} most relevant documents with similarity threshold {threshold}...")
         distances, indices = self.index.search(query_embedding, k)
 
-        # 3. Retrieve the corresponding documents
         results = []
         if indices.size > 0:
             query_indices = indices[0]
-            query_similarity = distances[0]
-            
-            assert len(query_indices) == len(query_similarity), "Indices and distances lengths mismatch"
+            query_similarities = distances[0] 
 
-            for doc_index, sim in zip(query_indices, query_similarity):
-                # FAISS uses -1 for invalid indices (e.g., if k > number of docs)
+            for doc_index, sim in zip(query_indices, query_similarities):
                 if doc_index != -1 and sim >= threshold:
                     document = self.stored_documents[doc_index]
                     results.append((document, float(sim)))
-
-        logger.info(f"Found {len(results)} similar documents.")
-        
+        logger.info(f"Found {len(results)} similar documents meeting the criteria.")
         return results
+
+    def save(self):
+        """
+        Saves the FAISS index and stored documents to the paths configured in the instance.
+        """
+        if not self.index:
+            logger.warning("Index is not initialized or is empty. Nothing to save for FAISS index.")
+            return
+        if not self.embeddings_model:
+            logger.error("Embeddings model not available. Cannot save embedding dimension.")
+            raise ValueError("Embeddings model is required to save metadata.")
+
+        os.makedirs(self.save_dir, exist_ok=True) 
+
+        faiss.write_index(self.index, self.index_path)
+        logger.info(f"FAISS index saved to {self.index_path}")
+
+        metadata = {
+            "stored_documents": self.stored_documents,
+            "emb_dim": self.embeddings_model.emb_dim,
+        }
+        with open(self.metadata_path, "wb") as f:
+            pickle.dump(metadata, f)
+        logger.info(f"Metadata saved to {self.metadata_path}")
+
+    @classmethod
+    def load(cls,
+             embeddings_model: EmbeddingsInterface,
+             load_dir: str = "src/langchain_demo/faiss_vb",
+             index_filename: str = DEFAULT_INDEX_FILENAME,
+             metadata_filename: str = DEFAULT_METADATA_FILENAME):
+        """
+        Loads the FAISS index and stored documents from the specified directory and filenames.
+
+        Args:
+            embeddings_model (EmbeddingsInterface): The embeddings model to use.
+            load_dir (str): The directory path from where to load the files.
+            index_filename (str): The name of the FAISS index file.
+            metadata_filename (str): The name of the metadata file.
+
+        Returns:
+            FaissVectorbase: A new instance with loaded data.
+        """
+        if not embeddings_model:
+            raise ValueError("An embeddings_model must be provided to load the FaissVectorbase.")
+
+        actual_index_path = os.path.join(load_dir, index_filename)
+        actual_metadata_path = os.path.join(load_dir, metadata_filename)
+
+        if not os.path.exists(actual_index_path):
+            logger.error(f"Index file not found: {actual_index_path}")
+            raise FileNotFoundError(f"FAISS index file not found: {actual_index_path}")
+        if not os.path.exists(actual_metadata_path):
+            logger.error(f"Metadata file not found: {actual_metadata_path}")
+            raise FileNotFoundError(f"Metadata file not found: {actual_metadata_path}")
+
+        logger.info(f"Loading FAISS index from {actual_index_path}")
+        loaded_index = faiss.read_index(actual_index_path)
+
+        logger.info(f"Loading metadata from {actual_metadata_path}")
+        with open(actual_metadata_path, "rb") as f:
+            metadata = pickle.load(f)
+
+        loaded_stored_documents = metadata["stored_documents"]
+        saved_emb_dim = metadata["emb_dim"]
+
+        if saved_emb_dim is not None and embeddings_model.emb_dim != saved_emb_dim:
+            raise ValueError(
+                f"Embedding dimension mismatch! Saved: {saved_emb_dim}, Provided: {embeddings_model.emb_dim}"
+            )
+        if loaded_index.d != embeddings_model.emb_dim:
+            raise ValueError(
+                f"FAISS index dimension mismatch! Index: {loaded_index.d}, Provided Model: {embeddings_model.emb_dim}"
+            )
+
+        # Create instance, passing the paths it's being loaded from
+        instance = cls(
+            embeddings_model=embeddings_model,
+            save_dir=load_dir,
+            index_filename=index_filename,
+            metadata_filename=metadata_filename
+        )
+        instance.index = loaded_index
+        instance.stored_documents = loaded_stored_documents
+
+        logger.info(f"FaissVectorbase loaded successfully. Index contains {instance.index.ntotal} vectors.")
+        return instance
