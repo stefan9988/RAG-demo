@@ -35,7 +35,7 @@ class FaissVectorbase(VectorbaseInterface):
 
         logger.info(f"Added {len(documents)} documents. Index now contains {self.index.ntotal} vectors.")
     
-    def search_documents(self, query, num_results=5):
+    def search_documents(self, query, num_results=5, threshold=0):
         """
         Searches for documents similar to the query.
 
@@ -64,15 +64,15 @@ class FaissVectorbase(VectorbaseInterface):
         results = []
         if indices.size > 0:
             query_indices = indices[0]
-            query_distances = distances[0]
+            query_similarity = distances[0]
             
-            assert len(query_indices) == len(query_distances), "Indices and distances lengths mismatch"
+            assert len(query_indices) == len(query_similarity), "Indices and distances lengths mismatch"
 
-            for doc_index, distance in zip(query_indices, query_distances):
+            for doc_index, sim in zip(query_indices, query_similarity):
                 # FAISS uses -1 for invalid indices (e.g., if k > number of docs)
-                if doc_index != -1:
+                if doc_index != -1 and sim >= threshold:
                     document = self.stored_documents[doc_index]
-                    results.append((document, float(distance)))
+                    results.append((document, float(sim)))
 
         logger.info(f"Found {len(results)} similar documents.")
         

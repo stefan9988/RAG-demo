@@ -13,12 +13,12 @@ OPENAI_EMBEDDING_MODEL_NAME = os.getenv("OPENAI_EMBEDDING_MODEL_NAME")
 if __name__ == "__main__":
     # 1. Initialize the vectorbase
     
-    # embeddings_model = HuggingFaceEmbeddings(
-    #     model_name=HUGGINGFACE_EMBEDDING_MODEL_NAME,
-    #     api_key=HUGGING_FACE_API_KEY)
-    embeddings_model = OpenAIEmbeddings(
-        model_name=OPENAI_EMBEDDING_MODEL_NAME, 
-        api_key=OPENAI_API_KEY)
+    embeddings_model = HuggingFaceEmbeddings(
+        model_name=HUGGINGFACE_EMBEDDING_MODEL_NAME,
+        api_key=HUGGING_FACE_API_KEY)
+    # embeddings_model = OpenAIEmbeddings(
+    #     model_name=OPENAI_EMBEDDING_MODEL_NAME, 
+    #     api_key=OPENAI_API_KEY)
     
     vector_db = FaissVectorbase(embeddings_model)
 
