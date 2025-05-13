@@ -1,6 +1,7 @@
 from langchain_demo.interfaces.vectorbase_interface import VectorbaseInterface
 from langchain_demo.interfaces.embeddings_interface import EmbeddingsInterface
 import faiss
+from typing import List
 import logging
 import os
 import pickle
@@ -66,7 +67,7 @@ class FaissVectorbase(VectorbaseInterface):
         self.stored_documents.extend(documents)
         logger.info(f"Added {len(documents)} documents. Index now contains {self.index.ntotal} vectors.")
 
-    def search_documents(self, query: str, num_results: int = 5, threshold: float = 0.0):
+    def search_documents(self, query: List[str], num_results: int = 5, threshold: float = 0.0):
         if not self.embeddings_model:
             logger.error("Embeddings model not initialized. Cannot search documents.")
             raise ValueError("Embeddings model is not set.")
@@ -74,7 +75,7 @@ class FaissVectorbase(VectorbaseInterface):
             logger.info("Index is empty. Cannot perform search.")
             return []
 
-        query_embedding = self.embeddings_model.get_embeddings([query])
+        query_embedding = self.embeddings_model.get_embeddings(query)
         k = min(num_results, self.index.ntotal)
         if k == 0: # handles edge case where index has items but k becomes 0
             logger.info("Effective k is 0, no search performed.")
@@ -84,15 +85,20 @@ class FaissVectorbase(VectorbaseInterface):
         distances, indices = self.index.search(query_embedding, k)
 
         results = []
-        if indices.size > 0:
-            query_indices = indices[0]
-            query_similarities = distances[0] 
+        
+        for i in range(indices.shape[0]): 
+            current_query_results = []   
+            query_indices = indices[i]   
+            query_similarities = distances[i] 
 
-            for doc_index, sim in zip(query_indices, query_similarities):
-                if doc_index != -1 and sim >= threshold:
+            for doc_index, sim in zip(query_indices, query_similarities): 
+                if doc_index != -1 and sim >= threshold:  
                     document = self.stored_documents[doc_index]
-                    results.append((document, float(sim)))
-        logger.info(f"Found {len(results)} similar documents meeting the criteria.")
+                    current_query_results.append((document, float(sim))) 
+            
+            results.append(current_query_results) 
+            
+        logger.info(f"Found {len(results)} similar documents meeting the criteria.") 
         return results
 
     def save(self):
