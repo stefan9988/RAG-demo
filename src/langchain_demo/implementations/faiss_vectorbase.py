@@ -94,7 +94,7 @@ class FaissVectorbase(VectorbaseInterface):
             for doc_index, sim in zip(query_indices, query_similarities): 
                 if doc_index != -1 and sim >= threshold:  
                     document = self.stored_documents[doc_index]
-                    current_query_results.append({"document index": int(doc_index), 
+                    current_query_results.append({"document id": int(doc_index), 
                                                   "document content": document, 
                                                   "similarity": float(sim),
                                                   "query": query[i]}) 

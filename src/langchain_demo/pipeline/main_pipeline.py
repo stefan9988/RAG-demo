@@ -2,9 +2,9 @@ from langchain_demo.implementations.hugging_face_embeddings import HuggingFaceEm
 from langchain_demo.implementations.openai_embeddings import OpenAIEmbeddings
 from langchain_demo.implementations.faiss_vectorbase import FaissVectorbase
 from langchain_demo.implementations.langchain_textsplitter import LangchainTextSplitter
+from langchain_demo.pipeline.helper_functions import get_info_to_extract, create_similar_docs_batches
 
 import os
-import json
 from langchain_community.document_loaders import PyPDFLoader
 from dotenv import load_dotenv
 
@@ -40,11 +40,8 @@ if __name__ == "__main__":
     
     vector_db= FaissVectorbase.load(embeddings_model, index_filename="hf.index", metadata_filename="hf.pkl")
     
-    with open("data/info_to_extract.json", 'r', encoding='utf-8') as f:
-        info_to_extract_json = json.load(f)
+    info_to_extract = get_info_to_extract("data/info_to_extract.json")
     
-    info_to_extract = [item for d in info_to_extract_json['policy'] for item in (d['Key'], d['Description'])]
-    info_to_extract = info_to_extract[:3]
-    similar_docs = vector_db.search_documents(info_to_extract, num_results=5, threshold=0.1)
-    for doc in similar_docs:
-        print(doc)
+    similar_docs = vector_db.search_documents(info_to_extract, num_results=3, threshold=0.1)
+    similar_docs_batches = create_similar_docs_batches(similar_docs, batch_size=8)
+    
