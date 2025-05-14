@@ -80,7 +80,7 @@ class HuggingFaceEmbeddings(EmbeddingsInterface):
         texts: List[str],
         batch_size: int = 32,
         normalize_embeddings: bool = True,
-        max_length: int = 1024
+        max_length: int = 512
     ) -> np.ndarray:
         """
         Generates sentence embeddings for a list of texts using a Hugging Face model.

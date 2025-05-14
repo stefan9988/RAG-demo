@@ -94,11 +94,14 @@ class FaissVectorbase(VectorbaseInterface):
             for doc_index, sim in zip(query_indices, query_similarities): 
                 if doc_index != -1 and sim >= threshold:  
                     document = self.stored_documents[doc_index]
-                    current_query_results.append((document, float(sim))) 
+                    current_query_results.append({"document index": int(doc_index), 
+                                                  "document content": document, 
+                                                  "similarity": float(sim),
+                                                  "query": query[i]}) 
             
             results.append(current_query_results) 
             
-        logger.info(f"Found {len(results)} similar documents meeting the criteria.") 
+        logger.info(f"Search completed. Found {len(results)} results for {len(query)} queries.")
         return results
 
     def save(self):

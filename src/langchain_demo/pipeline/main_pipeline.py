@@ -1,7 +1,11 @@
 from langchain_demo.implementations.hugging_face_embeddings import HuggingFaceEmbeddings
 from langchain_demo.implementations.openai_embeddings import OpenAIEmbeddings
 from langchain_demo.implementations.faiss_vectorbase import FaissVectorbase
+from langchain_demo.implementations.langchain_textsplitter import LangchainTextSplitter
+
 import os
+import json
+from langchain_community.document_loaders import PyPDFLoader
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -18,23 +22,29 @@ embeddings_model = HuggingFaceEmbeddings(
 #     model_name=OPENAI_EMBEDDING_MODEL_NAME, 
 #     api_key=OPENAI_API_KEY)
     
-vector_db = FaissVectorbase(embeddings_model, index_filename="aa.index", metadata_filename="aa.pkl")
+# vector_db = FaissVectorbase(embeddings_model, index_filename="hf.index", metadata_filename="hf.pkl")
+# splitter = LangchainTextSplitter()
 
 if __name__ == "__main__":
     
-    docs_to_add = [
-        "The weather today is sunny and warm.",
-        "Yesterday it rained heavily all day long.",
-        "Artificial intelligence is transforming many industries.",
-        "The Eiffel Tower is a famous landmark in Paris, France.",
-        "Many people enjoy sunny weather for outdoor activities.",
-        "Deep learning is a subset of machine learning."
-    ]
-    vector_db.add_documents(docs_to_add)
+    # filename = "data/Policy 01-Nov-2024-3607.pdf"
+    # loader = PyPDFLoader(filename)
+    # pages = [page for page in loader.lazy_load()]
     
-    search_query = ["Information about France", "Info about AI"]
-    similar_docs = vector_db.search_documents(search_query, num_results=3, threshold=0.1)
-    print(f"\nQuery: '{search_query}'")
-    print("Results:")
+    # documents = splitter.split_text(pages, chunk_size=500, chunk_overlap=50)
+    
+    # docs_to_add = [doc.page_content for doc in documents]
+    
+    # vector_db.add_documents(docs_to_add)
+    # vector_db.save()
+    
+    vector_db= FaissVectorbase.load(embeddings_model, index_filename="hf.index", metadata_filename="hf.pkl")
+    
+    with open("data/info_to_extract.json", 'r', encoding='utf-8') as f:
+        info_to_extract_json = json.load(f)
+    
+    info_to_extract = [item for d in info_to_extract_json['policy'] for item in (d['Key'], d['Description'])]
+    info_to_extract = info_to_extract[:3]
+    similar_docs = vector_db.search_documents(info_to_extract, num_results=5, threshold=0.1)
     for doc in similar_docs:
-        print(f"- {doc}")
+        print(doc)
