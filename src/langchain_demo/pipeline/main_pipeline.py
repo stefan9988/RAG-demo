@@ -2,9 +2,15 @@ from langchain_demo.implementations.hugging_face_embeddings import HuggingFaceEm
 from langchain_demo.implementations.openai_embeddings import OpenAIEmbeddings
 from langchain_demo.implementations.faiss_vectorbase import FaissVectorbase
 from langchain_demo.implementations.langchain_textsplitter import LangchainTextSplitter
+from langchain_demo.implementations.openai_api_call import OpenAIAPICall
+from langchain_demo.implementations.bedrock_api_call import BedrockAPICall
+
 from langchain_demo.pipeline.helper_functions import get_info_to_extract, create_similar_docs_batches 
 from langchain_demo.pipeline.helper_functions import create_key_description_pairs, extract_unique_keys_per_batch
-from langchain_demo.pipeline.helper_functions import join_document_content_per_batch
+from langchain_demo.pipeline.helper_functions import join_document_content_per_batch, create_messages
+
+from langchain_demo.config import SYSTEM_PROMPT, OPENAI_MODEL, BEDROCK_MODEL,TEMPERATURE, MAX_TOKENS 
+from langchain_demo.config import HUGGINGFACE_EMBEDDING_MODEL_NAME, OPENAI_EMBEDDING_MODEL_NAME
 
 import os
 from langchain_community.document_loaders import PyPDFLoader
@@ -12,9 +18,10 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
-HUGGINGFACE_EMBEDDING_MODEL_NAME = os.getenv("HUGGINGFACE_EMBEDDING_MODEL_NAME")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_EMBEDDING_MODEL_NAME = os.getenv("OPENAI_EMBEDDING_MODEL_NAME")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = os.getenv("AWS_REGION")
 
 embeddings_model = HuggingFaceEmbeddings(
         model_name=HUGGINGFACE_EMBEDDING_MODEL_NAME,
@@ -26,6 +33,20 @@ embeddings_model = HuggingFaceEmbeddings(
     
 # vector_db = FaissVectorbase(embeddings_model, index_filename="hf.index", metadata_filename="hf.pkl")
 # splitter = LangchainTextSplitter()
+
+# openai_api = OpenAIAPICall(api_key=OPENAI_API_KEY, model=MODEL,
+#                         system_prompt= SYSTEM_PROMPT,temperature=TEMPERATURE,
+#                         max_tokens=MAX_TOKENS)
+
+bedrock_api = BedrockAPICall(
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    region=AWS_REGION,
+    model=BEDROCK_MODEL,
+    system_prompt=SYSTEM_PROMPT,
+    temperature=TEMPERATURE,
+    max_tokens=MAX_TOKENS
+)
 
 if __name__ == "__main__":
     
@@ -50,8 +71,12 @@ if __name__ == "__main__":
     
     doc_content_batches = join_document_content_per_batch(relevant_docs_batches)
     info_to_extract_batches = extract_unique_keys_per_batch(relevant_docs_batches)
+    messages = create_messages(doc_content_batches, info_to_extract_batches)
     
-    print('a')
+    response,usage = bedrock_api.call(message=messages[0]) 
+    print(response)
+    print(usage)
+    
     
         
         

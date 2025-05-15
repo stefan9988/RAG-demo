@@ -6,7 +6,6 @@ class EmbeddingsInterface(ABC):
     """
     Abstract base class for generating embeddings from text.
     """
-    @abstractmethod
     def __init__(self, model_name: str, api_key: Optional[str] = None):
         """
         Initializes the embeddings model.
@@ -15,7 +14,8 @@ class EmbeddingsInterface(ABC):
             model_name (str): The name of the model to use.
             api_key (Optional[str]): API key for accessing the model.            
         """
-        pass
+        self.model_name = model_name
+        self.api_key = api_key
     
     @property
     @abstractmethod

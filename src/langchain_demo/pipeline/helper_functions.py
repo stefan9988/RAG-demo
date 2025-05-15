@@ -225,3 +225,10 @@ def join_document_content_per_batch(
         joined_content = separator.join(contents_in_batch)
         doc_content_batches.append(joined_content)
     return doc_content_batches
+
+def create_messages(doc_content_batches, info_to_extract_batches):
+    messages = []
+    for doc_content, info_to_extract in zip(doc_content_batches, info_to_extract_batches):
+        info_to_extract = ', '.join(info_to_extract)
+        messages.append(f'Extract the following information:\n{str(info_to_extract)}\n\nGiven the following context:\n\n{doc_content}')
+    return messages

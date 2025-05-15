@@ -24,8 +24,7 @@ class HuggingFaceEmbeddings(EmbeddingsInterface):
             api_key (Optional[str]): Hugging Face API key for private/gated models.
             device (Optional[str]): The device to use ('cuda', 'cpu'). 
         """
-        self.model_name = model_name
-        self.api_key = api_key
+        super().__init__(model_name = model_name, api_key = api_key)
         try:
             self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
             logger.info(f"Using device: {self.device}")

@@ -14,8 +14,8 @@ class OpenAIEmbeddings(EmbeddingsInterface):
             model_name (str): The name of the OpenAI model to use for embeddings.
             api_key (str, optional): The API key for OpenAI. Defaults to None.            
         """
-        self.model_name = model_name
-        self.api_key = api_key
+        super().__init__(model_name=model_name, api_key=api_key)
+        
         self.client = OpenAI(api_key=self.api_key)
         self._emb_dim = self.get_embeddings(["test"]).shape[1]
     
