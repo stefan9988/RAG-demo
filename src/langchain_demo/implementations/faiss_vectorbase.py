@@ -97,7 +97,7 @@ class FaissVectorbase(VectorbaseInterface):
                     current_query_results.append({"document id": int(doc_index), 
                                                   "document content": document, 
                                                   "similarity": float(sim),
-                                                  "query": query[i]}) 
+                                                  "key": query[i]}) 
             
             results.append(current_query_results) 
             

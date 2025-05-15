@@ -2,7 +2,9 @@ from langchain_demo.implementations.hugging_face_embeddings import HuggingFaceEm
 from langchain_demo.implementations.openai_embeddings import OpenAIEmbeddings
 from langchain_demo.implementations.faiss_vectorbase import FaissVectorbase
 from langchain_demo.implementations.langchain_textsplitter import LangchainTextSplitter
-from langchain_demo.pipeline.helper_functions import get_info_to_extract, create_similar_docs_batches
+from langchain_demo.pipeline.helper_functions import get_info_to_extract, create_similar_docs_batches 
+from langchain_demo.pipeline.helper_functions import create_key_description_pairs, extract_unique_keys_per_batch
+from langchain_demo.pipeline.helper_functions import join_document_content_per_batch
 
 import os
 from langchain_community.document_loaders import PyPDFLoader
@@ -42,6 +44,16 @@ if __name__ == "__main__":
     
     info_to_extract = get_info_to_extract("data/info_to_extract.json")
     
-    similar_docs = vector_db.search_documents(info_to_extract, num_results=3, threshold=0.1)
-    similar_docs_batches = create_similar_docs_batches(similar_docs, batch_size=8)
+    relevant_docs = vector_db.search_documents(info_to_extract, num_results=2, threshold=0.1)
+    key_description_pairs = create_key_description_pairs(relevant_docs)
+    relevant_docs_batches = create_similar_docs_batches(key_description_pairs, batch_size=8)
+    
+    doc_content_batches = join_document_content_per_batch(relevant_docs_batches)
+    info_to_extract_batches = extract_unique_keys_per_batch(relevant_docs_batches)
+    
+    print('a')
+    
+        
+        
+    
     
