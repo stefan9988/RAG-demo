@@ -1,6 +1,10 @@
 import json
 import itertools
 from typing import List, Dict, Any, Hashable, Iterable
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s %(asctime)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def get_info_to_extract(filename: str = "data/info_to_extract.json") -> List[str]:
     """
@@ -232,3 +236,33 @@ def create_messages(doc_content_batches, info_to_extract_batches):
         info_to_extract = ', '.join(info_to_extract)
         messages.append(f'Extract the following information:\n{str(info_to_extract)}\n\nGiven the following context:\n\n{doc_content}')
     return messages
+
+def create_extracted_info_dict(extracted_info: str) -> tuple:
+    """
+    Attempt to create a dictionary from a JSON string.
+    
+    Args:
+        extracted_info (str): JSON string containing extracted information.
+    
+    Returns:
+        dict: A dictionary created from the JSON string, or an empty dictionary if parsing fails.
+        bool: True if the dictionary was created successfully and contains no nested objects,
+            False if parsing fails or nested objects are found.
+    """
+    extracted_info_dict = {}
+    flag = False
+    
+    try:
+        extracted_info_dict = json.loads(extracted_info)
+        flag = True
+        
+    except json.decoder.JSONDecodeError:
+        logger.info(f'JSONDecodeError: Could not parse the extracted information. Extracted info: {extracted_info}')
+        
+    return extracted_info_dict, flag
+    
+def ensure_all_info_keys_present(extracted_info_dict, info_to_extract):
+    for key in info_to_extract:
+        if key not in extracted_info_dict:
+            extracted_info_dict[key] = None
+    return extracted_info_dict

@@ -8,9 +8,11 @@ from langchain_demo.implementations.bedrock_api_call import BedrockAPICall
 from langchain_demo.pipeline.helper_functions import get_info_to_extract, create_similar_docs_batches 
 from langchain_demo.pipeline.helper_functions import create_key_description_pairs, extract_unique_keys_per_batch
 from langchain_demo.pipeline.helper_functions import join_document_content_per_batch, create_messages
+from langchain_demo.pipeline.helper_functions import create_extracted_info_dict, ensure_all_info_keys_present
 
 from langchain_demo.config import SYSTEM_PROMPT, OPENAI_MODEL, BEDROCK_MODEL,TEMPERATURE, MAX_TOKENS 
 from langchain_demo.config import HUGGINGFACE_EMBEDDING_MODEL_NAME, OPENAI_EMBEDDING_MODEL_NAME
+from langchain_demo.config import VB_NUM_RESULTS, VB_SEARCH_THRESHOLD, INFO_EXTRACTION_BATCH_SIZE
 
 import os
 from langchain_community.document_loaders import PyPDFLoader
@@ -65,17 +67,26 @@ if __name__ == "__main__":
     
     info_to_extract = get_info_to_extract("data/info_to_extract.json")
     
-    relevant_docs = vector_db.search_documents(info_to_extract, num_results=2, threshold=0.1)
+    relevant_docs = vector_db.search_documents(info_to_extract, 
+                                               num_results=VB_NUM_RESULTS, 
+                                               threshold=VB_SEARCH_THRESHOLD)
     key_description_pairs = create_key_description_pairs(relevant_docs)
-    relevant_docs_batches = create_similar_docs_batches(key_description_pairs, batch_size=8)
+    relevant_docs_batches = create_similar_docs_batches(key_description_pairs, 
+                                                        batch_size=INFO_EXTRACTION_BATCH_SIZE)
     
     doc_content_batches = join_document_content_per_batch(relevant_docs_batches)
     info_to_extract_batches = extract_unique_keys_per_batch(relevant_docs_batches)
     messages = create_messages(doc_content_batches, info_to_extract_batches)
     
-    response,usage = bedrock_api.call(message=messages[0]) 
-    print(response)
-    print(usage)
+    extracted_info,usage = bedrock_api.call(message=messages[0]) 
+    extracted_info_dict, flag_info_dict_created = create_extracted_info_dict(extracted_info)
+    #TODO: if flag_info_dict_created is False, then we need to call API for creating the dict
+    extracted_info_dict = ensure_all_info_keys_present(extracted_info_dict, info_to_extract_batches[0])
+    print(extracted_info_dict)
+    
+    
+    
+
     
     
         
