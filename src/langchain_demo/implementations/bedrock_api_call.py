@@ -30,26 +30,81 @@ class BedrockAPICall(ModelApiCall):
         }
         self.session = boto3.Session(**self.session_kwargs)
         self.bedrock_runtime = self.session.client("bedrock-runtime")
+        
+    def _get_body(self, full_messages: list[dict]):
+        """Constructs the body for the Bedrock API call."""
+        if 'anthropic' in self.model:
+            body = json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": self.max_tokens,
+                "messages": full_messages,
+                "system": self.system_prompt,
+                "temperature": self.temperature,            
+            })
+        elif 'meta' in self.model:
+            #TODO: Check if this is correct for Meta models
+            body = json.dumps({
+                "prompt": f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+                    {self.system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>
+                    {full_messages}<|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
+                "max_gen_len": self.max_tokens,
+                "temperature": self.temperature,                
+            })
+            
+        elif 'mistral' in self.model:
+            has_system_prompt = any(msg['role'] == 'system' for msg in full_messages)
+            if not has_system_prompt:
+                system_msg = {
+                        "role": "system",
+                        "content": self.system_prompt
+                    }
+                full_messages.insert(0, system_msg)
+                
+            body = json.dumps({  
+                "messages": full_messages,
+                "max_tokens": self.max_tokens,
+                "temperature": self.temperature,                
+            })
 
+        else:
+            body = None
+            raise ValueError(f"""Cannot create body for model {self.model}. 
+                             Please implement this method for the specific model.""")
+        return body
+
+    def _format_response(self, response):
+        """Formats the response based on the model provider."""
+        if "anthropic" in self.model:                
+            return response['content'][0]['text'], response['usage'] 
+        elif "mistral" in self.model:
+            return response['choices'][0]['message']['content'], None
+        elif "meta" in self.model:
+            usage = {
+                'input_tokens': response['prompt_token_count'],
+                'output_tokens': response['generation_token_count']
+                    }
+            return response['generation'], usage
+        else:
+            raise ValueError("Model provider not supported")
+    
     def call(self, message: str):
         full_messages = []
         full_messages.extend(self.messages)  
         full_messages.append({"role": "user", "content": message})
         
-        body = json.dumps({   
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": self.max_tokens,
-            "messages": full_messages,
-            "system": self.system_prompt,
-            "temperature": self.temperature,            
-        })
         response = self.bedrock_runtime.invoke_model(
                     modelId=self.model,
                     contentType="application/json",
                     accept="application/json",
-                    body=body,
+                    body=self._get_body(full_messages),
                 )      
                 
         response = json.loads(response['body'].read())
         
-        return response['content'][0]['text'], response['usage'] 
+        response_text, response_usage = self._format_response(response)
+        return response_text, response_usage
+        
+            
+
+        
+        
