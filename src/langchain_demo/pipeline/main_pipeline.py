@@ -9,12 +9,14 @@ from langchain_demo.pipeline.helper_functions import get_info_to_extract, create
 from langchain_demo.pipeline.helper_functions import create_key_description_pairs, extract_unique_keys_per_batch
 from langchain_demo.pipeline.helper_functions import join_document_content_per_batch, create_messages
 from langchain_demo.pipeline.helper_functions import create_extracted_info_dict, ensure_all_info_keys_present
+from langchain_demo.pipeline.helper_functions import parallel_api_calls, process_api_extractions
 
 from langchain_demo.config import SYSTEM_PROMPT, OPENAI_MODEL, BEDROCK_MODEL,TEMPERATURE, MAX_TOKENS 
 from langchain_demo.config import HUGGINGFACE_EMBEDDING_MODEL_NAME, OPENAI_EMBEDDING_MODEL_NAME
 from langchain_demo.config import VB_NUM_RESULTS, VB_SEARCH_THRESHOLD, INFO_EXTRACTION_BATCH_SIZE
 
 import os
+import asyncio
 from langchain_community.document_loaders import PyPDFLoader
 from dotenv import load_dotenv
 
@@ -78,10 +80,11 @@ if __name__ == "__main__":
     info_to_extract_batches = extract_unique_keys_per_batch(relevant_docs_batches)
     messages = create_messages(doc_content_batches, info_to_extract_batches)
     
-    extracted_info,usage = bedrock_api.call(message=messages[0]) 
-    extracted_info_dict, flag_info_dict_created = create_extracted_info_dict(extracted_info)
-    #TODO: if flag_info_dict_created is False, then we need to call API for creating the dict
-    extracted_info_dict = ensure_all_info_keys_present(extracted_info_dict, info_to_extract_batches[0])
+    # extracted_info,usage = bedrock_api.call(message=messages[0]) 
+    api_responses = asyncio.run(parallel_api_calls(bedrock_api, messages))
+    extracted_info_dict = process_api_extractions(api_responses)
+    
+    extracted_info_dict = ensure_all_info_keys_present(extracted_info_dict, sum(info_to_extract_batches, []))
     print(extracted_info_dict)
     
     

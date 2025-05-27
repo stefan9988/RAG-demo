@@ -2,6 +2,8 @@ import json
 import itertools
 from typing import List, Dict, Any, Hashable, Iterable
 import logging
+import asyncio
+from langchain_demo.interfaces.model_api_call import ModelApiCall
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s %(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -251,7 +253,9 @@ def create_extracted_info_dict(extracted_info: str) -> tuple:
     """
     extracted_info_dict = {}
     flag = False
-    
+    if extracted_info is None:
+        logger.info('No extracted information provided.')
+        return extracted_info_dict, flag
     try:
         extracted_info_dict = json.loads(extracted_info)
         flag = True
@@ -266,3 +270,21 @@ def ensure_all_info_keys_present(extracted_info_dict, info_to_extract):
         if key not in extracted_info_dict:
             extracted_info_dict[key] = None
     return extracted_info_dict
+
+
+async def parallel_api_calls(model_api: ModelApiCall, messages: List[str]) -> List[tuple]:
+    tasks = [model_api.async_call(msg) for msg in messages]
+    results = await asyncio.gather(*tasks)
+    return results
+
+def process_api_extractions(api_responses):
+        extracted_info_dict = {}
+        for extracted_info, usage in api_responses:
+            info_dict, is_info_dict_created = create_extracted_info_dict(extracted_info)
+            if is_info_dict_created:
+                extracted_info_dict.update(info_dict)
+            else:
+                # #TODO: if flag_info_dict_created is False, then we need to call API for creating the dict
+                raise NotImplementedError("Flag is_info_dict_created is False, need to handle this case.")
+        
+        return extracted_info_dict

@@ -33,3 +33,18 @@ class ModelApiCall(ABC):
             str: The model's response.
         """
         pass
+    
+    @abstractmethod
+    async def async_call(self,
+                 messages: list):
+                 
+        """
+        Asynchronously make an API call to the model with the given prompt.
+
+        Args:
+            messages (list): A list of messages to be sent to the model.
+                        
+        Returns:
+            str: The model's response.
+        """
+        pass

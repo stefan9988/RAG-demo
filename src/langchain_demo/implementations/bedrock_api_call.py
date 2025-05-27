@@ -1,6 +1,11 @@
 from langchain_demo.interfaces.model_api_call import ModelApiCall
 import json
 import boto3
+import asyncio
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s %(asctime)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class BedrockAPICall(ModelApiCall):
     def __init__(
@@ -92,18 +97,27 @@ class BedrockAPICall(ModelApiCall):
         full_messages.extend(self.messages)  
         full_messages.append({"role": "user", "content": message})
         
-        response = self.bedrock_runtime.invoke_model(
-                    modelId=self.model,
-                    contentType="application/json",
-                    accept="application/json",
-                    body=self._get_body(full_messages),
-                )      
-                
-        response = json.loads(response['body'].read())
+        try:
+            response = self.bedrock_runtime.invoke_model(
+                        modelId=self.model,
+                        contentType="application/json",
+                        accept="application/json",
+                        body=self._get_body(full_messages),
+                    )      
+                    
+            response = json.loads(response['body'].read())
+            response_text, response_usage = self._format_response(response)
+            
+        except Exception as e:
+            logger.error(f"Error calling Bedrock API: {e}")
+            response_text, response_usage = None, None
         
-        response_text, response_usage = self._format_response(response)
         return response_text, response_usage
         
+    async def async_call(self, message: str):
+        """Asynchronous call to the Bedrock API."""
+        return await asyncio.to_thread(self.call, message)
+
             
 
         
