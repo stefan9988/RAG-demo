@@ -1,28 +1,35 @@
-[project]
+[tool.poetry]
 name = "langchain-demo"
 version = "0.1.0"
-description = ""
-authors = [
-    {name = "stefan dragicevic",email = "stefan.dragicevic@vegait.rs"}
-]
+description = "A demonstration project for Langchain." # It's good to fill this in!
+authors = ["stefan dragicevic <stefan.dragicevic@vegait.rs>"]
 readme = "README.md"
-requires-python = ">=3.10,<4.0"
-dependencies = [
-    "faiss-cpu (>=1.11.0,<2.0.0)",
-    "transformers (>=4.51.3,<5.0.0)",
-    "torch (>=2.7.0,<3.0.0)",
-    "python-dotenv (>=1.1.0,<2.0.0)",
-    "openai (>=1.78.1,<2.0.0)",
-    "langchain (>=0.3.25,<0.4.0)",
-    "langchain-community (>=0.3.24,<0.4.0)",
-    "pypdf (>=5.5.0,<6.0.0)",
-    "boto3 (>=1.38.16,<2.0.0)",
-]
+packages = [{include = "langchain_demo", from = "src"}] # This is correct for a src layout
 
-[tool.poetry]
-packages = [{include = "langchain_demo", from = "src"}]
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+faiss-cpu = ">=1.11.0,<2.0.0"
+transformers = ">=4.51.3,<5.0.0"
+torch = ">=2.7.0,<3.0.0"
+python-dotenv = ">=1.1.0,<2.0.0"
+openai = ">=1.78.1,<2.0.0"
+langchain = ">=0.3.25,<0.4.0"
+langchain-community = ">=0.3.24,<0.4.0"
+pypdf = ">=5.5.0,<6.0.0"
+boto3 = ">=1.38.16,<2.0.0"
+# uvicorn will be added here by 'poetry add uvicorn'
 
+# If you have development dependencies, they would go into a section like:
+# [tool.poetry.group.dev.dependencies]
+# pytest = "^7.0"
+uvicorn = "^0.34.2"
+fastapi = "^0.115.12"
+python-multipart = "^0.0.20"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=1.0.0"] # Or simply "poetry-core" which Poetry 1.8.2 will resolve to ^1.9.0
 build-backend = "poetry.core.masonry.api"
+
+# The [project] table can often be omitted if Poetry is your primary tool.
+# If you need it for other tools, it can co-exist, but Poetry will prioritize [tool.poetry]
+# For simplicity with Poetry, I've removed the [project] table as its contents are now in [tool.poetry].
