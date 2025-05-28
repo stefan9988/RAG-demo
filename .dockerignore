@@ -1,0 +1,61 @@
+# Git specific files
+.git
+.gitignore
+.gitattributes
+
+# Docker specific files (apart from Dockerfile itself if you have variants)
+# .dockerignore # You usually don't ignore .dockerignore itself
+
+# IDE and editor specific files/directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/  # <--- IMPORTANT: Exclude local virtual environments
+
+# Poetry specific (if not managed within Docker build context carefully)
+# poetry.lock # Usually you WANT to copy this
+# pyproject.toml # Usually you WANT to copy this
+
+# Build artifacts / distribution files (if not part of the image explicitly)
+dist/
+build/
+*.egg-info/
+*.egg
+*.whl
+
+# Local configuration files that might contain secrets or local overrides
+.env # If you manage secrets via runtime env variables, don't copy this
+local_settings.py
+
+# Test reports / coverage data
+htmlcov/
+.coverage
+*.cover
+.pytest_cache/
+.tox/
+
+# Logs
+*.log
+logs/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+
+data/ 
+
+# Any other large files/directories not needed for the build or runtime
+large_dataset_files/
+temp_files/
