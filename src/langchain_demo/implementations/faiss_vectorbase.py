@@ -24,7 +24,7 @@ class FaissVectorbase(VectorbaseInterface):
 
         self.embeddings_model = embeddings_model
         self.index = None 
-        self.stored_documents = []
+        self.stored_documents: list[str] = []
 
         # Construct full paths
         self.save_dir = save_dir

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from langchain_demo.interfaces.embeddings_interface import EmbeddingsInterface
 
 class VectorbaseInterface(ABC):
     @abstractmethod
@@ -11,5 +12,9 @@ class VectorbaseInterface(ABC):
     def save(self):
         pass
     @abstractmethod
-    def load(self):
+    def load(cls,
+             embeddings_model: EmbeddingsInterface,
+             load_dir: str,
+             index_filename: str,
+             metadata_filename: str):
         pass

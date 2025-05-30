@@ -46,7 +46,7 @@ def get_unique_dictionaries_by_document_id(data: List[Dict[str, Any]]) -> List[D
             dictionary will contain all encountered 'query' values in a 'queries' list
             and will not have a 'query' key.
     """
-    unique_dict = {}
+    unique_dict: Dict[Any, Dict[str, Any]] = {}
     
     for item in data:
         doc_id = item.get('document id')
@@ -119,9 +119,9 @@ def create_similar_docs_batches(similar_docs: List[List[Dict[str, Any]]], batch_
             unique document dictionaries (sorted by 'document id') that were
             aggregated from a set of original query results.
     """
-    similar_docs_batches = [similar_docs[i:i + batch_size] for i in range(0, len(similar_docs), batch_size)]
-    similar_docs_batches = [list(itertools.chain.from_iterable(batch)) for batch in similar_docs_batches]
-    similar_docs_batches = [get_unique_dictionaries_by_document_id(batch) for batch in similar_docs_batches]
+    batched_docs = [similar_docs[i:i + batch_size] for i in range(0, len(similar_docs), batch_size)]
+    flattened_batches = [list(itertools.chain.from_iterable(batch)) for batch in batched_docs]
+    similar_docs_batches = [get_unique_dictionaries_by_document_id(batch) for batch in flattened_batches]
     return similar_docs_batches
 
 def create_key_description_pairs(similar_docs: List[List[Dict[str, Any]]]) -> List[List[Dict[str, Any]]]:

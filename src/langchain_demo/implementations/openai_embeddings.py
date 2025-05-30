@@ -37,10 +37,7 @@ class OpenAIEmbeddings(EmbeddingsInterface):
         )    
         
         embeddings = [response.data[i].embedding for i in range(len(response.data))]
-        if not isinstance(embeddings, np.ndarray):
-            embeddings = np.array(embeddings).astype('float32')
-        elif embeddings.dtype != np.float32:
-             embeddings = embeddings.astype('float32')
+        embeddings_array = np.array(embeddings).astype('float32')
         
-        return embeddings
+        return embeddings_array
         

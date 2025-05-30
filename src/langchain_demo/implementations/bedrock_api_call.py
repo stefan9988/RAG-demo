@@ -10,29 +10,34 @@ logger = logging.getLogger(__name__)
 class BedrockAPICall(ModelApiCall):
     def __init__(
         self,
-        api_key: str = None,
-        aws_access_key_id: str = None,
-        aws_secret_access_key: str = None,
-        region: str = "us-east-1",
-        model: str = "anthropic.claude-3-haiku-20240307-v1:0",
-        system_prompt: str = None,
-        messages: list[dict] = None,
+        model: str,
+        system_prompt: str,
+        api_key: str | None = None,
+        messages: list[dict] | None = None,
         temperature: float = 0.0,
-        max_tokens: int = 512
+        max_tokens: int = 512,
+        **kwargs
     ):
         super().__init__(
             api_key=api_key,
             model=model,
             system_prompt=system_prompt,
-            messages=messages or [],
+            messages=messages,
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            **kwargs
         )
+
+        self.aws_access_key_id = kwargs.get('aws_access_key_id')
+        self.aws_secret_access_key = kwargs.get('aws_secret_access_key')
+        self.region = kwargs.get('region', 'us-east-1')
+        
         self.session_kwargs = {
-            'aws_access_key_id': aws_access_key_id,
-            'aws_secret_access_key': aws_secret_access_key,
-            'region_name': region
+            'aws_access_key_id': self.aws_access_key_id,
+            'aws_secret_access_key': self.aws_secret_access_key,
+            'region_name': self.region
         }
+
         self.session = boto3.Session(**self.session_kwargs)
         self.bedrock_runtime = self.session.client("bedrock-runtime")
         
@@ -47,11 +52,14 @@ class BedrockAPICall(ModelApiCall):
                 "temperature": self.temperature,            
             })
         elif 'meta' in self.model:
-            #TODO: Check if this is correct for Meta models
+            prompt = f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n{self.system_prompt}<|eot_id|>"
+            for msg in full_messages:
+                role_tag = "user" if msg["role"] == "user" else "assistant"
+                prompt += f"<|start_header_id|>{role_tag}<|end_header_id|>\n{msg['content']}<|eot_id|>"
+            prompt += "<|start_header_id|>assistant<|end_header_id|>"
+
             body = json.dumps({
-                "prompt": f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-                    {self.system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>
-                    {full_messages}<|eot_id|><|start_header_id|>assistant<|end_header_id|>""",
+                "prompt": prompt,
                 "max_gen_len": self.max_tokens,
                 "temperature": self.temperature,                
             })
@@ -93,16 +101,14 @@ class BedrockAPICall(ModelApiCall):
             raise ValueError("Model provider not supported")
     
     def call(self, message: str):
-        full_messages = []
-        full_messages.extend(self.messages)  
-        full_messages.append({"role": "user", "content": message})
+        self._add_message("user", message)
         
         try:
             response = self.bedrock_runtime.invoke_model(
                         modelId=self.model,
                         contentType="application/json",
                         accept="application/json",
-                        body=self._get_body(full_messages),
+                        body=self._get_body(self.messages),
                     )      
                     
             response = json.loads(response['body'].read())

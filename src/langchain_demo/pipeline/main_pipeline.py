@@ -45,6 +45,8 @@ embeddings_model = HuggingFaceEmbeddings(
 bedrock_api = BedrockAPICall(
     aws_access_key_id=AWS_ACCESS_KEY_ID,
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+    api_key=None,  
+    messages= None,
     region=AWS_REGION,
     model=BEDROCK_MODEL,
     system_prompt=SYSTEM_PROMPT,
@@ -82,6 +84,7 @@ if __name__ == "__main__":
     
     # extracted_info,usage = bedrock_api.call(message=messages[0]) 
     api_responses = asyncio.run(parallel_api_calls(bedrock_api, messages))
+    #TODO: fix Race condition issue with parallel_api_calls
     extracted_info_dict = process_api_extractions(api_responses)
     
     extracted_info_dict = ensure_all_info_keys_present(extracted_info_dict, sum(info_to_extract_batches, []))

@@ -9,7 +9,7 @@ class LangchainTextSplitter(TextSplitterInterface):
     def split_text(self, text: str, 
                    chunk_size: int = 500, 
                    chunk_overlap: int = 50, 
-                   separators: list = None) -> list:
+                   separators: list | None = None) -> list:
         """
         Splits the input text into smaller chunks.
 

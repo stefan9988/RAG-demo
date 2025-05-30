@@ -22,7 +22,7 @@ __pycache__/
 env/
 venv/
 .venv/  # <--- IMPORTANT: Exclude local virtual environments
-
+.mypy_cache
 # Poetry specific (if not managed within Docker build context carefully)
 # poetry.lock # Usually you WANT to copy this
 # pyproject.toml # Usually you WANT to copy this

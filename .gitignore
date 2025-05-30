@@ -3,3 +3,4 @@
 __pycache__/
 src/langchain_demo/faiss_vb/
 data/
+.mypy_cache/
