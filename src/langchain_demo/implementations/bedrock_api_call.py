@@ -41,7 +41,8 @@ class BedrockAPICall(ModelApiCall):
         self.session = boto3.Session(**self.session_kwargs)
         self.bedrock_runtime = self.session.client("bedrock-runtime")
         
-    def _get_body(self, full_messages: list[dict]):
+    def _get_body(self, message: str):
+        full_messages = [{"role":"user", "content": message}]
         """Constructs the body for the Bedrock API call."""
         if 'anthropic' in self.model:
             body = json.dumps({
@@ -101,18 +102,19 @@ class BedrockAPICall(ModelApiCall):
             raise ValueError("Model provider not supported")
     
     def call(self, message: str):
-        self._add_message("user", message)
         
         try:
             response = self.bedrock_runtime.invoke_model(
                         modelId=self.model,
                         contentType="application/json",
                         accept="application/json",
-                        body=self._get_body(self.messages),
+                        body=self._get_body(message),
                     )      
                     
             response = json.loads(response['body'].read())
             response_text, response_usage = self._format_response(response)
+            self._add_message("user", message)
+            self._add_message(response['role'], response_text)
             
         except Exception as e:
             logger.error(f"Error calling Bedrock API: {e}")

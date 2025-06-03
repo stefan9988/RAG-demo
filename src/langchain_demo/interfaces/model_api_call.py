@@ -19,7 +19,8 @@ class ModelApiCall(ABC):
         self.messages = messages if messages is not None else [] 
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.additional_params = kwargs
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     @abstractmethod
     def call(self,
@@ -33,6 +34,7 @@ class ModelApiCall(ABC):
                         
         Returns:
             str: The model's response.
+            dict: Additional information about token usage.
         """
         pass
     
@@ -47,7 +49,8 @@ class ModelApiCall(ABC):
             message (str): A message to be sent to the model.
                         
         Returns:
-            str: The model's response.
+            str: The model's response. 
+            dict: Additional information about token usage.
         """
         pass
 
