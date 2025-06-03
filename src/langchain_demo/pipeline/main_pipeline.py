@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPEN_AI_MODEL = os.getenv("OPEN_AI_MODEL")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("AWS_REGION")
@@ -38,21 +39,21 @@ embeddings_model = HuggingFaceEmbeddings(
 # vector_db = FaissVectorbase(embeddings_model, index_filename="hf.index", metadata_filename="hf.pkl")
 # splitter = LangchainTextSplitter()
 
-# openai_api = OpenAIAPICall(api_key=OPENAI_API_KEY, model=MODEL,
-#                         system_prompt= SYSTEM_PROMPT,temperature=TEMPERATURE,
-#                         max_tokens=MAX_TOKENS)
+llm_api = OpenAIAPICall(api_key=OPENAI_API_KEY, model=OPEN_AI_MODEL,
+                        system_prompt= SYSTEM_PROMPT,temperature=TEMPERATURE,
+                        max_tokens=MAX_TOKENS)
 
-bedrock_api = BedrockAPICall(
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    api_key=None,  
-    messages= None,
-    region=AWS_REGION,
-    model=BEDROCK_MODEL,
-    system_prompt=SYSTEM_PROMPT,
-    temperature=TEMPERATURE,
-    max_tokens=MAX_TOKENS
-)
+# llm_api = BedrockAPICall(
+#     aws_access_key_id=AWS_ACCESS_KEY_ID,
+#     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+#     api_key=None,  
+#     messages= None,
+#     region=AWS_REGION,
+#     model=BEDROCK_MODEL,
+#     system_prompt=SYSTEM_PROMPT,
+#     temperature=TEMPERATURE,
+#     max_tokens=MAX_TOKENS
+# )
 
 if __name__ == "__main__":
     
@@ -82,13 +83,14 @@ if __name__ == "__main__":
     info_to_extract_batches = extract_unique_keys_per_batch(relevant_docs_batches)
     messages = create_messages(doc_content_batches, info_to_extract_batches)
     
-    # extracted_info,usage = bedrock_api.call(message=messages[0]) 
-    api_responses = asyncio.run(parallel_api_calls(bedrock_api, messages))
+    extracted_info,usage = llm_api.call(message=messages[0]) 
+    print(extracted_info)
+    # api_responses = asyncio.run(parallel_api_calls(llm_api, messages))
     #TODO: fix Race condition issue with parallel_api_calls
-    extracted_info_dict = process_api_extractions(api_responses)
+    # extracted_info_dict = process_api_extractions(api_responses)
     
-    extracted_info_dict = ensure_all_info_keys_present(extracted_info_dict, sum(info_to_extract_batches, []))
-    print(extracted_info_dict)
+    # extracted_info_dict = ensure_all_info_keys_present(extracted_info_dict, sum(info_to_extract_batches, []))
+    # print(extracted_info_dict)
     
     
     

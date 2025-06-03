@@ -1,21 +1,24 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import List
+import numpy as np
 
 
 class EmbeddingsInterface(ABC):
     """
     Abstract base class for generating embeddings from text.
     """
-    def __init__(self, model_name: str, api_key: Optional[str] = None):
+    def __init__(self, model_name: str, **kwargs):
         """
         Initializes the embeddings model.
 
         Args:
             model_name (str): The name of the model to use.
-            api_key (Optional[str]): API key for accessing the model.            
+            **kwargs: Additional keyword arguments for model configuration.
         """
         self.model_name = model_name
-        self.api_key = api_key
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        
     
     @property
     @abstractmethod
@@ -29,7 +32,7 @@ class EmbeddingsInterface(ABC):
         pass
     
     @abstractmethod
-    def get_embeddings(self, texts):
+    def get_embeddings(self, texts: List[str]) -> np.ndarray:
         """
         Generate embeddings for a list of texts.
 

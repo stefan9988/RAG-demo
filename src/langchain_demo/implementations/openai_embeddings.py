@@ -7,7 +7,15 @@ import numpy as np
 logging.basicConfig(level=logging.INFO, format='%(levelname)s %(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
 class OpenAIEmbeddings(EmbeddingsInterface):
+    
+    MODEL_DIMENSIONS = {
+        "text-embedding-ada-002": 1536,
+        "text-embedding-3-small": 1536,
+        "text-embedding-3-large": 3072,
+    }
+
     def __init__(self, model_name: str, api_key: Optional[str] = None):
         """Initialize OpenAI embeddings with the specified model name and API key.
         Args:
@@ -17,7 +25,7 @@ class OpenAIEmbeddings(EmbeddingsInterface):
         super().__init__(model_name=model_name, api_key=api_key)
         
         self.client = OpenAI(api_key=self.api_key)
-        self._emb_dim = self.get_embeddings(["test"]).shape[1]
+        self._emb_dim = self.MODEL_DIMENSIONS[model_name]
     
     @property
     def emb_dim(self) -> int:

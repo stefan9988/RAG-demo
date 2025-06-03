@@ -15,7 +15,12 @@ class HuggingFaceEmbeddings(EmbeddingsInterface):
     A class to generate sentence embeddings using Hugging Face models.
     """
 
-    def __init__(self, model_name: str, api_key: Optional[str] = None, device: Optional[str] = None):
+    def __init__(self, model_name: str, 
+                 api_key: Optional[str] = None, 
+                 device: Optional[str] = None,
+                 batch_size: int = 32,
+                 normalize_embeddings: bool = True,
+                 max_length: int = 512):
         """
         Initializes the HuggingFaceEmbeddings class.
 
@@ -23,8 +28,18 @@ class HuggingFaceEmbeddings(EmbeddingsInterface):
             model_name (str): The name of the Hugging Face model to use.
             api_key (Optional[str]): Hugging Face API key for private/gated models.
             device (Optional[str]): The device to use ('cuda', 'cpu'). 
+            batch_size (int): The number of sentences to process in each batch.
+                            Defaults to 32.
+            normalize_embeddings (bool): Whether to normalize the embeddings to unit length (L2 norm).
+                                        Defaults to True.
+            max_length (int): Maximum sequence length for truncation. Defaults to 512.
         """
-        super().__init__(model_name = model_name, api_key = api_key)
+        super().__init__(model_name = model_name, 
+                         api_key=api_key, 
+                         device=device, 
+                         batch_size=batch_size, 
+                         normalize_embeddings=normalize_embeddings,
+                         max_length=max_length)
         try:
             self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
             logger.info(f"Using device: {self.device}")
@@ -76,23 +91,14 @@ class HuggingFaceEmbeddings(EmbeddingsInterface):
 
     def get_embeddings(
         self,
-        texts: List[str],
-        batch_size: int = 32,
-        normalize_embeddings: bool = True,
-        max_length: int = 512
+        texts: List[str],        
     ) -> np.ndarray:
         """
         Generates sentence embeddings for a list of texts using a Hugging Face model.
 
         Args:
             texts (List[str]): A list of sentences to embed.
-            batch_size (int): The number of sentences to process in each batch.
-                            Defaults to 32.
-            normalize_embeddings (bool): Whether to normalize the embeddings to unit length (L2 norm).
-                                        Defaults to True.
-            max_length (int): Maximum sequence length for truncation. Defaults to 1024.
-
-
+                
         Returns:
             np.ndarray: A NumPy array of shape (num_sentences, embedding_dimension)
                         containing the sentence embeddings.
@@ -100,12 +106,12 @@ class HuggingFaceEmbeddings(EmbeddingsInterface):
         
         all_embeddings = []
         num_texts = len(texts)
-        logger.info(f"Starting embedding generation for {num_texts} documents in batches of {batch_size}...")
+        logger.info(f"Starting embedding generation for {num_texts} documents in batches of {self.batch_size}...")
 
         # --- Process in Batches ---
-        for i in range(0, num_texts, batch_size):
-            batch_texts = texts[i : i + batch_size]
-            logger.debug(f"Processing batch {i//batch_size + 1}/{math.ceil(num_texts/batch_size)}")
+        for i in range(0, num_texts, self.batch_size):
+            batch_texts = texts[i : i + self.batch_size]
+            logger.debug(f"Processing batch {i//self.batch_size + 1}/{math.ceil(num_texts/self.batch_size)}")
 
             # --- Tokenization ---
             encoded_input = self.tokenizer(
@@ -113,7 +119,7 @@ class HuggingFaceEmbeddings(EmbeddingsInterface):
                 padding=True,
                 truncation=True,
                 return_tensors='pt',
-                max_length=max_length
+                max_length=self.max_length
             ).to(self.device) # Move tensors to the correct device
 
             # --- Inference ---
@@ -124,7 +130,7 @@ class HuggingFaceEmbeddings(EmbeddingsInterface):
             batch_embeddings = self._mean_pooling(model_output, encoded_input['attention_mask'])
 
             # --- Normalization ---
-            if normalize_embeddings:
+            if self.normalize_embeddings:
                 batch_embeddings = torch.nn.functional.normalize(batch_embeddings, p=2, dim=1)
 
             # Move embeddings to CPU before storing to avoid accumulating GPU memory
