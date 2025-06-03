@@ -1,59 +1,20 @@
-from langchain_demo.implementations.hugging_face_embeddings import HuggingFaceEmbeddings
-from langchain_demo.implementations.openai_embeddings import OpenAIEmbeddings
 from langchain_demo.implementations.faiss_vectorbase import FaissVectorbase
 from langchain_demo.implementations.langchain_textsplitter import LangchainTextSplitter
-from langchain_demo.implementations.openai_api_call import OpenAIAPICall
-from langchain_demo.implementations.bedrock_api_call import BedrockAPICall
 
-from langchain_demo.pipeline.helper_functions import get_info_to_extract, create_similar_docs_batches 
-from langchain_demo.pipeline.helper_functions import create_key_description_pairs, extract_unique_keys_per_batch
-from langchain_demo.pipeline.helper_functions import join_document_content_per_batch, create_messages
-from langchain_demo.pipeline.helper_functions import create_extracted_info_dict, ensure_all_info_keys_present
-from langchain_demo.pipeline.helper_functions import parallel_api_calls, process_api_extractions
 
-from langchain_demo.config import SYSTEM_PROMPT, OPENAI_MODEL, BEDROCK_MODEL,TEMPERATURE, MAX_TOKENS 
-from langchain_demo.config import HUGGINGFACE_EMBEDDING_MODEL_NAME, OPENAI_EMBEDDING_MODEL_NAME
+from langchain_demo.pipeline.helper_functions import (get_info_to_extract, create_similar_docs_batches,
+        create_key_description_pairs, extract_unique_keys_per_batch,join_document_content_per_batch, 
+        create_messages, ensure_all_info_keys_present,parallel_api_calls, process_api_extractions)
+
 from langchain_demo.config import VB_NUM_RESULTS, VB_SEARCH_THRESHOLD, INFO_EXTRACTION_BATCH_SIZE
+from langchain_demo.implementations import get_llm_api, get_embeddings_model
 
-import os
 import asyncio
 from langchain_community.document_loaders import PyPDFLoader
-from dotenv import load_dotenv
 
 
-load_dotenv(override=True)
-HUGGING_FACE_API_KEY = os.getenv("HUGGING_FACE_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_REGION = os.getenv("AWS_REGION")
-
-embeddings_model = HuggingFaceEmbeddings(
-        model_name=HUGGINGFACE_EMBEDDING_MODEL_NAME,
-        api_key=HUGGING_FACE_API_KEY)
-
-# embeddings_model = OpenAIEmbeddings(
-#     model_name=OPENAI_EMBEDDING_MODEL_NAME, 
-#     api_key=OPENAI_API_KEY)
-    
-# vector_db = FaissVectorbase(embeddings_model, index_filename="hf.index", metadata_filename="hf.pkl")
-# splitter = LangchainTextSplitter()
-
-llm_api = OpenAIAPICall(api_key=OPENAI_API_KEY, model=OPENAI_MODEL,
-                        system_prompt= SYSTEM_PROMPT,temperature=TEMPERATURE,
-                        max_tokens=MAX_TOKENS)
-
-# llm_api = BedrockAPICall(
-#     aws_access_key_id=AWS_ACCESS_KEY_ID,
-#     aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-#     api_key=None,  
-#     messages= None,
-#     region=AWS_REGION,
-#     model=BEDROCK_MODEL,
-#     system_prompt=SYSTEM_PROMPT,
-#     temperature=TEMPERATURE,
-#     max_tokens=MAX_TOKENS
-# )
+embeddings_model = get_embeddings_model('huggingface')
+llm_api = get_llm_api('openai')
 
 if __name__ == "__main__":
     
