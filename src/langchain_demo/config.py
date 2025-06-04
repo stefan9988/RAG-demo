@@ -1,3 +1,9 @@
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 100
+SEPARATORS = ["\n\n", "\n", " ", ""]
+VB_SAVE_DIR = "src/langchain_demo/faiss_vb"
+INDEX_FILENAME = "faiss_index.index"
+METADATA_FILENAME = "metadata.pkl"
 INFO_EXTRACTION_BATCH_SIZE = 11
 VB_SEARCH_THRESHOLD = 0.1
 VB_NUM_RESULTS = 3

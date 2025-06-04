@@ -10,12 +10,13 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s %(asctime)s - %(me
 logger = logging.getLogger(__name__)
 
 class FaissVectorbase(VectorbaseInterface):
+    DEFAULT_SAVE_DIR = "src/langchain_demo/faiss_vb"
     DEFAULT_INDEX_FILENAME = "faiss_index.index"
     DEFAULT_METADATA_FILENAME = "metadata.pkl"
 
     def __init__(self,
                  embeddings_model: EmbeddingsInterface, 
-                 save_dir: str = "src/langchain_demo/faiss_vb", # Directory to save/load from
+                 save_dir: str = DEFAULT_SAVE_DIR, 
                  index_filename: str = DEFAULT_INDEX_FILENAME,
                  metadata_filename: str = DEFAULT_METADATA_FILENAME):
 
