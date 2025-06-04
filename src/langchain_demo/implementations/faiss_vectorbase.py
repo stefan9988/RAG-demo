@@ -48,7 +48,7 @@ class FaissVectorbase(VectorbaseInterface):
             logger.warning("Embeddings model not available, FAISS index not initialized.")
 
 
-    def add_documents(self, documents: list[str]):
+    def add_documents(self, documents: list[str], document_name: str):
         if not self.embeddings_model:
             logger.error("Embeddings model not initialized. Cannot add documents.")
             raise ValueError("Embeddings model is not set.")
@@ -66,9 +66,16 @@ class FaissVectorbase(VectorbaseInterface):
         embeddings = self.embeddings_model.get_embeddings(documents)
         self.index.add(embeddings)
         self.stored_documents.extend(documents)
+
+        if not hasattr(self, 'document_names'):
+            self.document_names = []
+    
+        self.document_names.extend([document_name] * len(documents))
+
         logger.info(f"Added {len(documents)} documents. Index now contains {self.index.ntotal} vectors.")
 
-    def search_documents(self, query: List[str], num_results: int = 5, threshold: float = 0.0):
+    def search_index(self, queries: List[str], num_results: int = 5, threshold: float = 0.0, 
+                 document_names: List[str] | None = None):
         if not self.embeddings_model:
             logger.error("Embeddings model not initialized. Cannot search documents.")
             raise ValueError("Embeddings model is not set.")
@@ -76,14 +83,20 @@ class FaissVectorbase(VectorbaseInterface):
             logger.info("Index is empty. Cannot perform search.")
             return []
 
-        query_embedding = self.embeddings_model.get_embeddings(query)
-        k = min(num_results, self.index.ntotal)
-        if k == 0: # handles edge case where index has items but k becomes 0
+        query_embedding = self.embeddings_model.get_embeddings(queries)
+        
+        # If filtering by document names, we need to search more results initially
+        # to account for filtering, then trim to the desired number
+        search_k = self.index.ntotal if document_names else min(num_results, self.index.ntotal)
+        
+        if search_k == 0:
             logger.info("Effective k is 0, no search performed.")
             return []
 
-        logger.info(f"Searching for {k} most relevant documents with similarity threshold {threshold}...")
-        distances, indices = self.index.search(query_embedding, k)
+        filter_msg = f" (filtering by documents: {document_names})" if document_names else ""
+        logger.info(f"Searching for {num_results} most relevant documents with similarity threshold {threshold}{filter_msg}...")
+        
+        distances, indices = self.index.search(query_embedding, search_k)
 
         results = []
         
@@ -93,16 +106,43 @@ class FaissVectorbase(VectorbaseInterface):
             query_similarities = distances[i] 
 
             for doc_index, sim in zip(query_indices, query_similarities): 
-                if doc_index != -1 and sim >= threshold:  
+                if doc_index != -1 and sim >= threshold:
+                    # Check if we have document names stored
+                    if hasattr(self, 'document_names') and len(self.document_names) > doc_index:
+                        doc_name = self.document_names[doc_index]
+                        
+                        # Apply document name filter if specified
+                        if document_names and doc_name not in document_names:
+                            continue  # Skip this document as it doesn't match the filter
+                    else:
+                        doc_name = None
+                        # If filtering is requested but no document names are stored, skip
+                        if document_names:
+                            logger.warning("Document name filtering requested but no document names stored.")
+                            continue
+                    
                     document = self.stored_documents[doc_index]
-                    current_query_results.append({"document id": int(doc_index), 
-                                                  "document content": document, 
-                                                  "similarity": float(sim),
-                                                  "key": query[i]}) 
+                    result = {
+                        "document id": int(doc_index), 
+                        "document content": document, 
+                        "similarity": float(sim),
+                        "key": queries[i]
+                    }
+                    
+                    # Add document name to result if available
+                    if doc_name:
+                        result["document_name"] = doc_name
+                    
+                    current_query_results.append(result)
+                    
+                    # Stop if we have enough results for this query
+                    if len(current_query_results) >= num_results:
+                        break
             
             results.append(current_query_results) 
             
-        logger.info(f"Search completed. Found {len(results)} results for {len(query)} queries.")
+        total_results = sum(len(query_results) for query_results in results)
+        logger.info(f"Search completed. Found {total_results} results for {len(queries)} queries.")
         return results
 
     def save(self):

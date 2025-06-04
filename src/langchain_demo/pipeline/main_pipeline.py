@@ -23,16 +23,17 @@ if __name__ == "__main__":
     
     docs_to_add = [doc.page_content for doc in documents]
     
-    vector_db.add_documents(docs_to_add)
+    vector_db.add_documents(documents=docs_to_add, document_name=filename)
 #     vector_db.save()
     
 #     vector_db= FaissVectorbase.load(embeddings_model, index_filename="hf.index", metadata_filename="hf.pkl")
     
     info_to_extract = get_info_to_extract("data/info_to_extract.json")
     
-    relevant_docs = vector_db.search_documents(info_to_extract, 
-                                               num_results=VB_NUM_RESULTS, 
-                                               threshold=VB_SEARCH_THRESHOLD)
+    relevant_docs = vector_db.search_index(queries=info_to_extract, 
+                                           document_names=[filename],
+                                           num_results=VB_NUM_RESULTS, 
+                                           threshold=VB_SEARCH_THRESHOLD)
     key_description_pairs = create_key_description_pairs(relevant_docs)
     relevant_docs_batches = create_similar_docs_batches(key_description_pairs, 
                                                         batch_size=INFO_EXTRACTION_BATCH_SIZE)
@@ -49,13 +50,3 @@ if __name__ == "__main__":
     
     extracted_info_dict = ensure_all_info_keys_present(extracted_info_dict, sum(info_to_extract_batches, []))
     print(extracted_info_dict)
-    
-    
-    
-
-    
-    
-        
-        
-    
-    
